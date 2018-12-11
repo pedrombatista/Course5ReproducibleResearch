@@ -1,0 +1,102 @@
+---
+title: "Course 5 - Project Assignment 1 - Final Version"
+author: "Pedro Magalhaes Batista"
+date: "12/11/2018"
+output: html_document
+---
+# SUMMARY
+1. Parsing data and plot
+2. Read DATA
+3. Activities per day
+4. Histogram of total number of steps/day
+5. Mean and median
+6. The 5-minute interval
+7. Code
+8. Histogram of total number of steps/day after imputting missing values
+9. Panel plot comparing average number of steps/5-minute interval between weekends and weekdays
+
+## 1. Parsing data and plot
+```{r, echo=TRUE}
+library(ggplot2)
+library(lubridate)
+library(dplyr)
+```
+
+## 2. Read DATA
+```{r, echo=TRUE}
+setwd("~/Dropbox/DATA SCIENCE/COURSE 5 WEEK 2 PROJECT")
+activities <- read.csv("activity.csv")
+activities$date <- ymd(activities$date)
+```
+
+## 3. Activities per day
+```{r, echo=TRUE}
+activities_per_day <- group_by(activities, date)
+activities_per_interval <- group_by(activities, interval)
+```
+
+## 4. Histogram of total number of steps/day
+```{r, echo=TRUE}
+total <- tapply(activities$steps, activities$date, FUN=sum)
+barplot(total, las=2, cex.names = 0.5)
+```
+
+## 5. Mean and median
+```{r, echo=TRUE}
+mean_median <- summarise(activities_per_day, mean=mean(steps, na.rm = TRUE), median=median(steps, na.rm = TRUE))
+plot(mean_median$mean, type="l", col="red", ylab = "Quantity of Steps", xlab = "Number of Day", las=2, main="Average")
+lines(mean_median$median, type="l", col="blue")
+legend("topright", legend=c("mean", "median"), pch=1, col=c("red", "blue"))
+```
+
+## 6. The 5-minute interval
+
+```{r, echo=TRUE}
+average_of_steps <- summarise(activities_per_interval, average=mean(steps, na.rm = TRUE))
+ranking_of_intervals <- arrange(average_of_steps, desc(average))
+print(ranking_of_intervals$interval[1])
+```
+
+## 7. Code
+
+```{r, echo=TRUE}
+nas <- is.na(activities$steps)
+total_empty <- sum(nas)
+percentage_empty <- mean(nas)
+# Total empty results
+print(total_empty)
+
+# Percentage
+print(paste(sprintf("%.2f", percentage_empty * 100), "%", sep=""))
+```
+
+```{r, echo=TRUE}
+not_empty <- mutate(activities)
+na_intervals <- not_empty$interval[nas]
+average_na_intervals <- sapply(na_intervals, function(item) {average_of_steps$average[average_of_steps$interval==item]})
+not_empty$steps[nas] = average_na_intervals
+#average_of_steps_by_interval$average[average_of_steps_by_interval$interval==0]
+```
+
+
+## 8. Histogram of total number of steps/day after imputting missing values
+
+```{r, echo=TRUE}
+not_empty_items <- tapply(not_empty$steps, not_empty$date, FUN=sum)
+
+par(mfrow=c(2,1))
+barplot(total, las=2, cex.names = 0.5, main="Histogram with NAs")
+barplot(not_empty_items, las=2, cex.names = 0.5, main="Histogram without NAs")
+```
+
+# Missing values change our results.
+
+## 9. Panel plot comparing average number of steps/5-minute interval between weekends and weekdays
+
+```{r, echo=TRUE}
+activities_with_days <- mutate(activities, weekday=weekdays(date))
+activities_by_day_interval <- group_by(activities_with_days, weekday, interval)
+
+results_per_day <- summarise(activities_by_day_interval, steps=mean(steps, na.rm=TRUE))
+qplot(interval, steps, data=results_per_day, facets= weekday ~ .) + geom_line()
+```
